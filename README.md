@@ -20,7 +20,7 @@ This integration pattern lets a Salesforce Agentforce **invoke an Apex action**,
 4. Salesforce Apex @InvocableMethod that calls the API server
     
 5. Agentforce Action that invokes the Apex method
-    
+
 
 ---
 
