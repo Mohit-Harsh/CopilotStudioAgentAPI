@@ -20,7 +20,7 @@ async function acquireToken (settings: ConnectionSettings): Promise<string> {
       authority: `https://login.microsoftonline.com/${settings.tenantId}`,
       clientSecret: process.env.CLIENTSECRET,
     },
-    cache: None,
+    cache: NULL,
     system: {
       loggerOptions: {
         loggerCallback (loglevel: msal.LogLevel, message: string, containsPii: boolean) {
@@ -142,6 +142,7 @@ const PORT = 3000;
 app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
 });
+
 
 
 
