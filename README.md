@@ -45,7 +45,7 @@ This integration pattern lets a Salesforce Agentforce **invoke an Apex action**,
     
 - **App Registration** — Azure AD application used to authenticate the API bridge and request the Copilot.
     
-- **Express API Server** — The Node/Express app (bridge) that authenticates using the App Registration and forwards requests to Copilot.
+- **Express API Server** — The Node/Express app (bridge) that authenticates using MSAL and forwards requests to Copilot Studio Agent.
     
 - **Apex @InvocableMethod** — Salesforce Apex method which Agentforce calls as an action.
     
@@ -72,14 +72,11 @@ This integration pattern lets a Salesforce Agentforce **invoke an Apex action**,
         
 5. **Publish** the Agent (version your production/dev environments appropriately).
     
+![Copilot_Studio_Agent](./static/copilot_studio_agent.png)
 
-**Verification**
 
-- After publishing, note the `agentIdentifier`/schema name and `environmentId` (you will need both for the API bridge `.env`).
-    
+![Authentication_Config](./static/authenticate_with_microsoft.png)
 
-**Image placeholder**  
-`[Copilot Studio Agent Settings image]` — replace: `https://example.com/images/copilot_security_authenticate_with_microsoft.png`
 
 ---
 
@@ -111,8 +108,7 @@ This integration pattern lets a Salesforce Agentforce **invoke an Apex action**,
 3. Click **Grant admin consent for** .
     
 
-**Image placeholder**  
-`[api_permissions_img]` — replace: `https://example.com/images/api_permissions_placeholder.png`
+![API_Permissions](./static/api_permissions.png)
 
 **Power Platform missing?**  
 If **Power Platform API** is not available in the portal, run this in Azure PowerShell:
@@ -161,6 +157,8 @@ tenantId="" # Tenant ID of the App Registration used to login (same tenant as Co
 appClientId="" # App (Client) ID of the App Registration used to login (same tenant).
 CLIENTSECRET="" # Client Secret generated in Azure
 ```
+
+![metadata](./static/metadata.png)
 
 **Local run**
 
@@ -214,7 +212,7 @@ CLIENTSECRET="" # Client Secret generated in Azure
     
 - Implement retries and proper exception handling.
     
-- For production, do not embed secrets in Apex; authenticate using OAuth from the Express bridge (Apex only forwards requests). Salesforce should call your Express endpoint over HTTPS.
+- Do not embed secrets in Apex; authenticate using OAuth from the Express bridge (Apex only forwards requests). Salesforce should call your Express endpoint over HTTPS.
     
 
 **Navigation to create Apex**
@@ -315,25 +313,6 @@ public class CopilotAgentInvoke
 
 ---
 
-# Testing & Verification Checklist
-
-1. **Copilot Published:** Agent status is `Published` and `Authenticate with Microsoft` is enabled.
-    
-2. **App Registration:** `tenantId`, `appClientId`, and `CLIENTSECRET` exist and are recorded. Admin consent granted.
-    
-3. **Redirect URIs:** Azure UI redirect URI matches `src/index.ts` exactly.
-    
-4. **Express Bridge:** Starts successfully, exposes health endpoint (e.g., `/health`) and logs successful token acquisition.
-    
-5. **Apex to Bridge:** Use Postman or a Salesforce test class to call the Apex Invocable and confirm it reaches the Express server.
-    
-6. **End-to-End:** From Agentforce, run the flow and confirm Copilot returns the expected response to Salesforce.
-    
-7. **Error Cases:** Simulate expired secret and confirm graceful error handling/logging.
-    
-
----
-
 # Common Errors & Fixes
 
 - **401 Unauthorized / invalid_client / invalid_grant**
@@ -358,3 +337,15 @@ public class CopilotAgentInvoke
         
 
 ---
+
+# References
+
+- [Register an application in Microsoft Entra ID](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app#register-an-application)
+
+- [Microsoft Agents JavaScript SDK - copilotstudio-client](https://github.com/microsoft/Agents/tree/main/samples/nodejs/copilotstudio-client)
+
+- [@microsoft/agents-copilotstudio-client package](https://learn.microsoft.com/en-us/javascript/api/@microsoft/agents-copilotstudio-client/?view=agents-sdk-js-latest)
+
+- [Microsoft Copilot Studio documentation](https://learn.microsoft.com/en-us/microsoft-copilot-studio/)
+
+- [Agentforce Developer Guide](https://developer.salesforce.com/docs/einstein/genai/guide/get-started-agents.html)

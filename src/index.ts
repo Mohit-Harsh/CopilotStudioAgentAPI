@@ -20,7 +20,9 @@ async function acquireToken (settings: ConnectionSettings): Promise<string> {
       authority: `https://login.microsoftonline.com/${settings.tenantId}`,
       clientSecret: process.env.CLIENTSECRET,
     },
-    cache: NULL,
+    cache: {
+      cachePlugin: new MsalCachePlugin(path.join(os.tmpdir(), 'mcssample.tockencache.json'))
+    },
     system: {
       loggerOptions: {
         loggerCallback (loglevel: msal.LogLevel, message: string, containsPii: boolean) {
@@ -36,7 +38,7 @@ async function acquireToken (settings: ConnectionSettings): Promise<string> {
   const pca = new msal.PublicClientApplication(msalConfig)
   const tokenRequest = {
     scopes: ['https://api.powerplatform.com/.default'],
-    redirectUri: 'https://copilotstudioagentapi.onrender.com',
+    redirectUri: 'http://localhost',
   }
   let token
   try {
@@ -59,7 +61,6 @@ const createClient = async (): Promise<CopilotStudioClient> => {
   const settings = loadCopilotStudioConnectionSettingsFromEnv()
 
   const token = await acquireToken(settings)
-  console.log('Token: ',token)
   const copilotClient = new CopilotStudioClient(settings, token)
   console.log(`Copilot Studio Client Version: ${pkg.version}, running with settings: ${JSON.stringify(settings, null, 2)}`)
   return copilotClient
@@ -95,7 +96,6 @@ const app = express();
 // Middleware to parse JSON requests
 app.use(express.json());
 app.use((req, res, next) => {
-  console.log('Request Recieved: ',req);
   res.header("Access-Control-Allow-Origin", "*"); // allow all origins
   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   next();
@@ -142,7 +142,3 @@ const PORT = 3000;
 app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
 });
-
-
-
-
