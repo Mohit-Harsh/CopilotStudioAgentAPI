@@ -38,7 +38,7 @@ async function acquireToken (settings: ConnectionSettings): Promise<string> {
   const pca = new msal.PublicClientApplication(msalConfig)
   const tokenRequest = {
     scopes: ['https://api.powerplatform.com/.default'],
-    redirectUri: 'http://localhost',
+    redirectUri: 'https://copilotstudioagentapi.onrender.com',
   }
   let token
   try {
@@ -96,6 +96,7 @@ const app = express();
 // Middleware to parse JSON requests
 app.use(express.json());
 app.use((req, res, next) => {
+  console.log('Request Recieved: ',req);
   res.header("Access-Control-Allow-Origin", "*"); // allow all origins
   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   next();
@@ -142,3 +143,4 @@ const PORT = 3000;
 app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
 });
+
