@@ -61,6 +61,7 @@ const createClient = async (): Promise<CopilotStudioClient> => {
   const settings = loadCopilotStudioConnectionSettingsFromEnv()
 
   const token = await acquireToken(settings)
+  console.log('Token: ',token)
   const copilotClient = new CopilotStudioClient(settings, token)
   console.log(`Copilot Studio Client Version: ${pkg.version}, running with settings: ${JSON.stringify(settings, null, 2)}`)
   return copilotClient
@@ -143,4 +144,5 @@ const PORT = 3000;
 app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
 });
+
 
