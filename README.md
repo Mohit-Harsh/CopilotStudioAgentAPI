@@ -338,6 +338,20 @@ public class CopilotAgentInvoke
 
 ---
 
+# Example
+
+
+**Agent Action**
+
+![Agent_Action](./static/agent_action.png)
+
+**Agent Preview**
+
+![Agent_Preview](./static/agent_preview.png)
+
+
+---
+
 # References
 
 - [Register an application in Microsoft Entra ID](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app#register-an-application)
