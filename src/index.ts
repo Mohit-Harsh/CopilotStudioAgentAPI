@@ -3,65 +3,15 @@ import express from "express";
 
 import * as msal from '@azure/msal-node'
 import { Activity, ActivityTypes, CardAction } from '@microsoft/agents-activity'
-import { ConnectionSettings, loadCopilotStudioConnectionSettingsFromEnv, CopilotStudioClient, CopilotStudioConnectionSettings } from '@microsoft/agents-copilotstudio-client'
+import { ConnectionSettings, loadCopilotStudioConnectionSettingsFromEnv, CopilotStudioClient } from '@microsoft/agents-copilotstudio-client'
 import pkg from '@microsoft/agents-copilotstudio-client/package.json' with { type: 'json' }
-import readline from 'readline'
-import open from 'open'
-import os from 'os'
-import path from 'path'
-
-import { MsalCachePlugin } from './msalCachePlugin.js'
 
 
-async function acquireToken (settings: ConnectionSettings): Promise<string> {
-  const msalConfig = {
-    auth: {
-      clientId: settings.appClientId,
-      authority: `https://login.microsoftonline.com/${settings.tenantId}`,
-      clientSecret: process.env.CLIENTSECRET,
-    },
-    cache: {
-      cachePlugin: new MsalCachePlugin(path.join(os.tmpdir(), 'mcssample.tockencache.json'))
-    },
-    system: {
-      loggerOptions: {
-        loggerCallback (loglevel: msal.LogLevel, message: string, containsPii: boolean) {
-          if (!containsPii) {
-            console.log(loglevel, message)
-          }
-        },
-        piiLoggingEnabled: false,
-        logLevel: msal.LogLevel.Verbose,
-      }
-    }
-  }
-  const pca = new msal.PublicClientApplication(msalConfig)
-  const tokenRequest = {
-    scopes: ['https://api.powerplatform.com/.default'],
-    redirectUri: 'http://localhost',
-  }
-  let token
-  try {
-    const accounts = await pca.getAllAccounts()
-    if (accounts.length > 0) {
-      const response2 = await pca.acquireTokenSilent({ account: accounts[0], scopes: tokenRequest.scopes })
-      token = response2.accessToken
-    } else {
-      token = ""
-    }
-  } catch (error) {
-    console.error('Error acquiring token interactively:', error)
-    token=""
-  }
-  return token
-}
-
-const createClient = async (): Promise<CopilotStudioClient> => {
+const createClient = async (access_token:string): Promise<CopilotStudioClient> => {
 
   const settings = loadCopilotStudioConnectionSettingsFromEnv()
-
-  const token = await acquireToken(settings)
-  const copilotClient = new CopilotStudioClient(settings, token)
+  //const token = await acquireToken(settings);
+  const copilotClient = new CopilotStudioClient(settings,access_token);
   console.log(`Copilot Studio Client Version: ${pkg.version}, running with settings: ${JSON.stringify(settings, null, 2)}`)
   return copilotClient
 
@@ -102,40 +52,52 @@ app.use((req, res, next) => {
 });
 
 
-app.post("/continue", async(req,res) => {
+app.post("/invoke", async(req,res)=>{
 
-  const { query,conversationId } = req.body;
-
-  if(query.length >0 && conversationId.length>0)
+  try 
   {
-    const copilotClient = await createClient()
-    const act: Activity = await copilotClient.startConversationAsync(true)
-    // console.log('\nSuggested Actions: ')
-    // act.suggestedActions?.actions.forEach((action: CardAction) => console.log(action.value))
-    const response = await askQuestion(copilotClient,conversationId,query);
-    
-    res.send(response);
-  }
+    // Get Authorization header
+    const authHeader = req.headers["authorization"]; // or req.get("authorization")
 
+    if (!authHeader) {
+      return res.status(401).json({ error: "Missing Authorization header" });
+    }
+
+    // Expected format: "Bearer <token>"
+    const parts = authHeader.split(" ");
+    if (parts.length !== 2 || parts[0] !== "Bearer") {
+      return res.status(400).json({ error: "Invalid Authorization header format" });
+    }
+
+    if(req.body == undefined)
+    {
+      return res.status(500).json({ error: "Request Body is empty" });
+    }
+
+    const access_token = parts[1]; // <-- This is your access token
+    const {query} = req.body;
+
+    // Create Copilot Client
+    const copilotClient = await createClient(access_token);
+    
+    // Invoke Copilot Studio Agent
+    const act: Activity = await copilotClient.startConversationAsync(true);
+    const response = await askQuestion(copilotClient, act.conversation?.id!, query);
+
+    // Return Json Response
+    res.json({
+      "message":response,
+      "conversationId":act.conversation?.id
+    });
+    
+  } 
+  catch (err) 
+  {
+    console.error("Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 })
 
-// Example API endpoint
-app.post("/start", async (req, res) => {
-
-  const { query } = req.body;
-
-  const copilotClient = await createClient()
-  const act: Activity = await copilotClient.startConversationAsync(true)
-  // console.log('\nSuggested Actions: ')
-  // act.suggestedActions?.actions.forEach((action: CardAction) => console.log(action.value))
-  const response = await askQuestion(copilotClient, act.conversation?.id!, query);
-  
-  res.json({
-    "message":response,
-    "conversationId":act.conversation?.id
-  })
-
-});
 
 // Start the server
 const PORT = 3000;
