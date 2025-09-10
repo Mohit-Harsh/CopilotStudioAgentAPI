@@ -1,227 +1,193 @@
-# Guide — Agent-to-Agent Communication
+# Agent-to-Agent Integration Guide
 
 **Salesforce Agentforce ⇄ Microsoft Copilot Studio**
-
-A clear, step-by-step developer guide to connect a Salesforce Agentforce to a published Microsoft Copilot Studio Agent.
-
-
----
-
-## Overview
-
-This integration pattern lets a Salesforce Agentforce **invoke an Apex action**, which calls an **Express API bridge**, which in turn calls a **published Copilot Studio Agent**. Flow:
-
-1. Copilot Studio Agent (published & configured to “Authenticate with Microsoft”)
-    
-2. Azure App Registration (service principal + permissions + secret)
-    
-3. Express API Server (bridge that uses the App Registration to auth & invoke the Copilot)
-    
-4. Salesforce Apex @InvocableMethod that calls the API server
-    
-5. Agentforce Action that invokes the Apex method
-
+Professional, step-by-step developer documentation (no code included).
+Placeholders marked where you should insert code snippets, configuration screenshots, or architecture diagrams.
 
 ---
 
-## Prerequisites
+## Table of contents
 
-- Azure subscription & permissions to create App Registrations & grant admin consent.
-    
-- Access to Copilot Studio and permission to create/publish Agents.
-    
-- Salesforce org with Agentforce installed and permission to create Apex classes and Agentforce Actions.
-    
-- Node.js + npm on the machine where you run the Express API (or a host to deploy it).
-    
-- Git access to clone the bridge repo.
-    
+1. [Overview](#overview)
+2. [Prerequisites & accounts](#prerequisites--accounts)
+3. [High-level architecture](#high-level-architecture)
+4. [Step-by-step setup](#step-by-step-setup)
 
----
-
-## Quick glossary
-
-- **Copilot Studio Agent** — The AI agent published in Microsoft Copilot Studio.
-    
-- **App Registration** — Azure AD application used to authenticate the API bridge and request the Copilot.
-    
-- **Express API Server** — The Node/Express app (bridge) that authenticates using MSAL and forwards requests to Copilot Studio Agent.
-    
-- **Apex @InvocableMethod** — Salesforce Apex method which Agentforce calls as an action.
-    
+   * [A. Create Azure / Microsoft Entra user](#a-create-azure--microsoft-entra-user)
+   * [B. Create Copilot Studio Agent](#b-create-copilot-studio-agent)
+   * [C. App registration (Azure)](#c-app-registration-azure)
+   * [D. Salesforce: Auth. Provider](#d-salesforce-auth-provider)
+   * [E. Salesforce: External Credential(s)](#e-salesforce-external-credentials)
+   * [F. Salesforce: Named Credential](#f-salesforce-named-credential)
+   * [G. Apex (Agent Action)](#g-apex-agent-action)
+   * [H. Express.js bridge (Microsoft Agents SDK)](#h-expressjs-bridge-microsoft-agents-sdk)
+   * [I. Misc: Remote site, Redirect URIs & consent](#i-misc-remote-site-redirect-uris--consent)
+5. [Security & RBAC notes](#security--rbac-notes)
+6. [Troubleshooting checklist & common errors](#troubleshooting-checklist--common-errors)
+7. [Placeholders — where to insert code & images](#placeholders-—-where-to-insert-code--images)
+8. [References & useful links](#references--useful-links)
 
 ---
 
-# Detailed Steps
+# Overview
 
-## Step 1 — Create & Publish Copilot Studio Agent
+This guide documents a secure flow where Salesforce (Agentforce) invokes an Apex action that calls an Express.js bridge, and that bridge calls a Microsoft Copilot Studio Agent on behalf of the signed-in Microsoft user. Authentication is handled so the Microsoft user’s token (from Salesforce Named Credentials / External Credential) is forwarded to the Express server and used to invoke Copilot Studio via Microsoft’s Agents SDK.
 
-**Purpose:** Create the Copilot that will answer the financial/organizational queries.
+Key outcomes:
 
-**Navigation**
-
-1. Open **Copilot Studio** (your tenant).
-    
-2. **Create → New Agent** (follow your org’s naming conventions).
-    
-3. Configure knowledge sources, skills, and prompts per your requirements.
-    
-4. **Settings → Security → Authentication** → **Select: Authenticate with Microsoft**.
-    
-    - This setting ensures the Copilot accepts requests authenticated with your Azure AD token.
-        
-5. **Publish** the Agent (version your production/dev environments appropriately).
-    
-![Copilot_Studio_Agent](./static/copilot_studio_agent.png)
-
-
-![Authentication_Config](./static/authenticate_with_microsoft.png)
-
+* Per-user (delegated) calls to Copilot Studio (each call is scoped to the Microsoft user’s permissions). ([Microsoft Learn][1])
+* Copilot Studio invoked from a trusted bridge (Express.js) using the **user** access token forwarded by Salesforce. ([Microsoft Learn][2], [npm][3])
 
 ---
 
-## Step 2 — App Registration (Azure AD)
+# Prerequisites & accounts
 
-**Purpose:** Create or reuse an App Registration to allow the Express bridge to obtain tokens and call the Copilot/Power Platform APIs.
+* **Azure / Microsoft Entra tenant** with privileges to create users and register apps (User Administrator / App admin). ([Microsoft Learn][4])
+* **Salesforce org** with System Administrator access (to create Auth Providers, External Credentials, Named Credentials, Remote Site Settings, Apex, and Agentforce actions). ([Salesforce][5])
+* Host for the **Express.js** server (TLS required; publicly reachable by Salesforce).
+* Node.js + npm environment for the Express server (the server will use Microsoft’s Agents SDK / CopilotStudio client). ([Microsoft Learn][2], [npm][3])
 
-**Navigation**
+---
 
-1. Go to **Azure Portal** → **Azure Active Directory (Entra ID)** → **App registrations**.
-    
-2. Either **Open the existing registration** for the Copilot integration or **New registration**.
-    
-    - **Name:** Meaningful (e.g., `Copilot-Studio-Bridge-API`)
-        
-    - **Supported account types:** Choose based on your tenant strategy. For same-tenant Copilot use: **Accounts in this organizational directory only**.
-        
-    - **Redirect URI:** _(Add later — see Step 4)_
-        
+# High-level architecture
 
-**API Permissions**
+1. Salesforce user triggers an Agent action (Apex `@InvocableMethod`).
+2. Apex uses a **Named Credential** to call the Express.js server; Salesforce injects (per-user) Microsoft OAuth token into the call. ([Salesforce Developers][6], [Salesforce Ben][7])
+3. Express.js receives request + bearer token, uses Microsoft **Agents SDK** / Copilot client to invoke the Copilot Studio Agent with the forwarded token. ([Microsoft Learn][2], [npm][3])
+4. Copilot Studio resolves knowledge sources (e.g., SharePoint) using the same user identity — RBAC enforced by Microsoft Graph / SharePoint. ([Microsoft Learn][1])
 
-1. In the App Registration, go to **API permissions → Add a permission**.
-    
-2. Add the permissions your Copilot and Power Platform calls need (see the example image).
-    
-    - _Add the exact permissions shown in your organizational screenshot._
-        
-3. Click **Grant admin consent for** .
-    
+(Insert architecture diagram here) — **placeholder**.
 
-![API_Permissions](./static/api_permissions.png)
+---
 
-**Power Platform missing?**  
-If **Power Platform API** is not available in the portal, run this in Azure PowerShell:
+# Step-by-step setup
+
+> Each step contains: purpose, exact navigation (where applicable), and important tips.
+
+---
+
+## A. Create Azure / Microsoft Entra user
+
+**Purpose:** create a Microsoft user (internal or guest) to share the Copilot Studio agent and to test delegated access.
+
+**Navigation (Azure portal):**
+
+1. Sign in to **Microsoft Entra admin center** ([https://portal.azure.com](https://portal.azure.com) → Azure Active Directory / Entra ID).
+2. **Identity > Users > All users → New user → Create new user**. Fill `User principal name`, `Display name`, password options. ([Microsoft Learn][4])
+
+**Tips:**
+
+* If the user should be a guest (external), use *Invite external user*.
+* Assign any role required for SharePoint or tenant-level actions (least privilege only).
+
+---
+
+## B. Create Copilot Studio Agent
+
+**Purpose:** create the Copilot Studio agent that will be invoked.
+
+**Navigation (Copilot Studio):**
+
+1. Sign in to **Copilot Studio** (Microsoft 365 portal → Copilot Studio).
+2. **Create agent** → configure knowledge sources (SharePoint sites), actions, and settings.
+3. Note and copy the agent metadata you’ll need later: **environment id**, **schema name**, **app id** (if present), **tenant id**. These values are required by your Express.js integration. ([Microsoft Learn][2])
+
+**Share with user:** share the agent (Viewer or appropriate role) with the Azure user you created so they chat with the agent.
+
+**Tip:** If you plan to embed or integrate via SDK, check **Settings → Security → Authentication** on the Copilot Studio agent (you may choose delegated authentication). ([Microsoft Learn][2])
+
+---
+
+## C. App registration (Azure AD / Entra)
+
+**Purpose:** app that will be used to request tokens and allow Salesforce to authenticate (Auth Provider) and to request delegated scopes.
+
+**Navigation (Azure portal → Entra ID → App registrations):**
+
+1. **New registration** → name, supported account types (choose Work or school accounts).
+2. After register: copy **Application (client) ID** and **Directory (tenant) ID**. ([Microsoft Learn][8])
+3. **Certificates & secrets** → **New client secret** → copy the secret value now (will be used in Salesforce Auth Provider / External Credential). ([Microsoft Learn][8])
+
+**API permissions (important):**
+
+* Add **delegated** permissions:
+
+  * `openid`, `offline_access` (for OAuth flows/refresh tokens).
+  * `Sites.Read.All` (or the least privileged SharePoint/Graph scopes required to access the documents used as knowledge).
+  * `CopilotStudio.Copilots.Invoke` — required by the Agents SDK to call Copilot Studio as a user. *(Depending on tenant and SDK release this exact permission may appear as a Copilot / Copilot Studio permission)*. ([Microsoft Learn][1], [npm][3])
+
+**Tip:** After adding delegated permissions, an admin must **Grant consent** (or the user will be prompted on first use). Use the Azure portal’s *Grant admin consent* button where appropriate.
+
+**Note:** : If you don't see Power Platform API showing up in the list when searching by GUID, it's possible that you still have access to it but the visibility isn't refreshed. To force a refresh run the below PowerShell script:
 
 ```powershell
-# Install the Microsoft Entra module (if not installed)
+#Install the Microsoft Entra the module
 Install-Module AzureAD
 
 Connect-AzureAD
 New-AzureADServicePrincipal -AppId 8578e004-a5c6-46e7-913e-12f58912df43 -DisplayName "Power Platform API"
 ```
 
-_(This creates a service principal entry for Power Platform so you can select the permission.)_
+---
 
-**Certificates & Secrets**
+## D. Salesforce: Auth. Provider (Microsoft)
 
-1. Go to **Certificates & secrets → New client secret**.
-    
-2. Create a secret, copy the value immediately — you **won’t** be able to see it again.
-    
-    - Store it securely (Key Vault, secrets manager, or encrypted environment store).
-        
+**Purpose:** allow Salesforce to perform OAuth flows with Microsoft (consumer key/secret mapping).
 
-**Notes**
+**Navigation (Salesforce Setup):**
 
-- Record: `tenantId`, `appClientId` (Application (client) ID), and the client secret. These go in the API bridge `.env`.
-    
+1. Setup → **Auth. Providers** → **New** → Provider Type: *OpenID Connect / Microsoft* (or configure manually).
+2. Fill **Consumer Key** = *client id*, **Consumer Secret** = *client secret* (copied from App Registration). Set authorize / token endpoints according to Microsoft (use endpoints described in Azure docs). ([Salesforce][5], [Microsoft Learn][10])
+3. Save → Salesforce will display a **Callback URL**. **Copy** this callback and put it into Azure App Registration → **Authentication** → **+Add Platform** → **Web** → **Redirect URI** → `Callback URL`. ([Microsoft Learn][10])
+
+**Tip:** If your Named Credential is per-user (user identity), use an OAuth flow that supports per-user consent (Browser / authorization code flow).
 
 ---
 
-## Step 3 — Run API Server (Express bridge)
+## E. Salesforce: External Credential(s)
 
-**Purpose:** The Express app authenticates using Azure AD and forwards queries to the Copilot Studio Agent.
+**Purpose:** configure auth method that Named Credential will reuse. In Salesforce’s External Credentials you define how Salesforce obtains tokens.
 
-**Repository**
+**Navigation (Salesforce Setup → External Credentials):**
 
-- Clone the bridge repository:  [Link](https://github.com/Mohit-Harsh/CopilotStudioAgentAPI.git)    
+1. New External Credential → choose **OAuth 2.0** (Client Credentials or Authorization Code depending on your design). Fill parameters and associate the Auth Provider you created earlier. ([Salesforce][11])
+2. **Principals (Authenticated Identities):** add and authenticate the principals you intend to use:
 
-**Environment variables**  
-Create a `.env` file at the project root with:
+   * `https://graph.microsoft.com/.default`
+   * `https://api.powerplatformapi.com/.default`
+     These are typical resource identifiers when using client credentials or to request delegated scopes for Graph/Power Platform. The Microsoft account used during authentication will be used to invoke Copilot and access SharePoint resources. ([Microsoft Learn][9])
 
-```python
-environmentId="" # Environment ID of environment with the CopilotStudio App.
-agentIdentifier="" # Schema Name of the Copilot to use
-tenantId="" # Tenant ID of the App Registration used to login (same tenant as Copilot).
-appClientId="" # App (Client) ID of the App Registration used to login (same tenant).
-CLIENTSECRET="" # Client Secret generated in Azure
-```
-
-![metadata](./static/metadata.png)
-
-**Local run**
-
-1. `npm install`
-    
-2.  `npm run start`    
-
-**Production**
-
-- Deploy to a secure host (Azure App Service, AWS, GCP, Heroku, etc.). Ensure HTTPS and proper firewall rules.
+**Tip:** For per-user tokens use Authorization Code flow with refresh (`offline_access`) so Salesforce can persist user tokens.
 
 ---
 
-## Step 4 — Configure Redirect URI
+## F. Salesforce: Named Credential
 
-**Purpose:** Allow the App Registration to correctly redirect flow to your API server.
+**Purpose:** single declarative endpoint with authentication plumbing — Apex uses the Named Credential and Salesforce injects the token automatically.
 
-1. **App Registration**
+**Navigation (Salesforce Setup → Named Credentials):**
 
-	- Go to **Azure Portal** → Open **App Registration** → select your **App** → go to **Authentication**.
-		
-	- Click **Add a platform**.
-		
-	- Select **Mobile and desktop applications**.
-		
-	- Under **Redirect URIs** click **Add a Redirect URI** and paste your **Server URL** (use the exact value your app will call).
-	
-	- Click **Save** to persist changes.
+1. Setup → **Named Credentials** → **New Named Credential**.
+2. **URL** = your Express.js server base URL (e.g., `https://express-bridge.example.com/`).
+3. **Identity Type** = *Per User* (if you want Salesforce to use the calling user’s Microsoft identity) or *Named Principal* (shared account) depending on requirements.
+4. **Authentication Protocol** = OAuth 2.0 → connect using the External Credential you created. Save. ([Salesforce][12], [UnofficialSF][13])
 
-2. **index.ts**
-
-	- Go to **src** → **index.ts** → replace the **redirectUri** value with the **Server URL**
-
-	```Java
-		const tokenRequest = {
-		scopes: ['https://api.powerplatform.com/.default'],
-		redirectUri: <your_server_url>,
-	  }
-	```
-
+**Note:** When Apex calls the Named Credential endpoint, Salesforce will inject an `Authorization: Bearer <token>` header (no need to add it manually in code). ([Salesforce Developers][6])
 
 ---
 
-## Step 5 — Apex Class (Salesforce)
+## G. Apex (Agent Action)
 
-**Purpose:** Provide a Salesforce server-side method (with `@InvocableMethod`) that calls the Express API.
+**Purpose:** allow Salesforce Agentforce (or any flow/process) to invoke a server-side integration via Apex.
 
-**Best practice**
+**Key requirements:**
 
-- Use `HttpRequest` and configure endpoint and headers.
-    
-- Implement retries and proper exception handling.
-    
-- Do not embed secrets in Apex; authenticate using OAuth from the Express bridge (Apex only forwards requests). Salesforce should call your Express endpoint over HTTPS.
-    
+* Annotate the Apex method with `@InvocableMethod` so it can be used as an Agent Action (or Flow/Process). The method must be `static` and accept a supported input type. ([Salesforce Developers][14])
+* Call the **Named Credential** endpoint; **do not** hardcode tokens — reference the Named Credential URL (Salesforce will inject the token).
 
-**Navigation to create Apex**
+**Apex Code:**
 
-1. Salesforce Setup → **Developer Console** (or Setup → Apex Classes → New).
-    
-2. Create a new Apex class with a public, static `@InvocableMethod` method that accepts the input from Agentforce and calls the Express API.
-    
-```Java
+```java
 public class CopilotAgentInvoke 	
 {
 	public class RequestWrapper
@@ -238,20 +204,18 @@ public class CopilotAgentInvoke
      	for(RequestWrapper request: requests)
         {
             HttpRequest req = new HttpRequest();
-            req.setMethod('POST');
-            
+            req.setEndpoint('callout:AlphaFin/invoke');
             req.setHeader('Content-Type', 'application/json');
             req.setTimeout(120000);
-            
-           
-            req.setEndpoint('https://copilotstudioagentapi.loca.lt/start');
-            req.setBody(JSON.serialize(new Map<String, Object>{
+            req.setMethod('POST');
+            req.setBody(JSON.serialize(new Map<String,Object>{
                 'query' => request.query
-                    }));
+            }));
             
             Http http = new Http();
             HttpResponse res = http.send(req);
-            System.debug(res);
+            
+            System.debug(res.getBody());
             
             if(res.getStatusCode() == 200)
             {
@@ -278,88 +242,68 @@ public class CopilotAgentInvoke
 }
 ```
 
-**Configure Remote Site Settings**
+---
 
-- Add the Express Server URL to **Remote Site Settings**.
-    
+## H. Express.js bridge (Microsoft Agents SDK)
+
+**Purpose:** receive requests from Salesforce (with user token), and invoke Copilot Studio Agent via Microsoft Agents SDK / Copilot client.
 
 ---
 
-## Step 6 — Create Agentforce Action
+## I. Remote site settings, Redirect URIs & consent
 
-**Purpose:** Wire the Apex method into an Agentforce Action so the Agentforce agent can call it.
-
-**Navigation**
-
-1. Salesforce Setup → Quick Find → **Agentforce Assets**.
-    
-2. **Actions → New Action**.
-    
-    - **Type:** Apex
-        
-    - **Apex Class:** Select the class you created in Step 5.
-        
-    - Configure inputs and outputs mapping (match the Invocable method parameter structure).
-        
-3. Save & publish the Action.
-    
-
-**Usage**
-
-- Add the Action to the **Agentforce Agent** or **Prompt Template** where you want the call to Copilot Studio to be made. 
- 
-- The Action will invoke the Apex method, which calls your Express bridge, which then calls Copilot and returns the response.
-    
+* **Salesforce Remote Site Settings**: add the Express server’s base URL to **Remote Site Settings** if your org uses older callout enforcement (or if your org still requires explicit allowlisting). This ensures Apex callouts are allowed. ([Salesforce][15])
+* **App Registration Redirect URIs**: paste the **Salesforce callback URL** (copied from the Auth Provider setup) and the **Express Server URL** into **Azure App Registration → Authentication → Redirect URIs**. The redirect URI must match exactly. ([Microsoft Learn][10])
+* **Admin consent**: after adding delegated permissions, use *Grant admin consent* in the Azure portal, or have each user consent on first sign-in. Some permissions like `Sites.Read.All` require admin consent. ([Microsoft Learn][1])
 
 ---
 
-# Common Errors & Fixes
+# Security & RBAC notes
 
-- **401 Unauthorized / invalid_client / invalid_grant**
-    
-    - Check `appClientId`, `CLIENTSECRET`, and `tenantId`. Ensure secret is not expired. Ensure App Registration is in the same tenant as Copilot.
-        
-- **redirect_uri_mismatch**
-    
-    - Ensure exact match between Azure App Registration redirect URI and the redirect configured in `src/index.ts`.
-        
-- **Power Platform API not listed**
-    
-    - Use the Azure PowerShell snippet (see Step 2) to add the service principal.
-        
-- **Connection refused from Salesforce to API**
-    
-    - Ensure API host is publicly reachable or whitelist Salesforce IPs, and the endpoint is HTTPS. For dev, use a tunneling service (ngrok/localtunnel) but prefer hosted deployments for production.
-        
-- **CORS Issues in Browser-based flows**
-    
-    - Ensure CORS is configured properly on your Express server for the client origins used.
-        
+* **Delegated permissions**: when you add Graph delegated permissions (e.g., `Sites.Read.All`), the app can act *only* on data the signed-in user can access — Microsoft Graph enforces per-user RBAC. This is why forwarding the user token is important for enforcing tenant RBAC. Do not use application permissions unless necessary. ([Microsoft Learn][1])
+* **Least privilege**: request the minimal Graph/SharePoint scopes required; prefer site-specific resource access where possible instead of tenant-wide `*.All` scopes. ([Microsoft Learn][16])
+* **Token lifecycle**: if using Authorization Code + refresh (`offline_access`), implement safe refresh handling on Salesforce or the bridge. If you must use client credentials (app identity) for background jobs, ensure long-term secrets are stored securely (Key Vault / protected secrets). ([Microsoft Learn][9])
 
 ---
 
-# Example
+# Troubleshooting checklist & common errors
 
-
-**Agent Action**
-
-![Agent_Action](./static/agent_action.png)
-
-**Agent Preview**
-
-![Agent_Preview](./static/agent_preview.png)
-
+* **`accessDenied` / 401 when granting PnP/Azure permission** → check that an **admin** granted consent for the delegated permissions and that the app registration has the required Copilot/Graph permission. Confirm tenant admin consent. ([Microsoft Learn][1], [npm][3])
+* **Salesforce callout fails** → ensure Named Credential configured correctly, Remote Site Settings updated, and Apex endpoint uses `callout:<Named_Credential>` syntax. Check debug logs for `Authorization` header presence. ([Salesforce Developers][6], [Salesforce][15])
+* **Copilot invocation permission error** → verify `CopilotStudio.Copilots.Invoke` (or equivalent Copilot permission) is present and admin-consented in app registration. ([npm][3])
 
 ---
 
-# References
+# References & useful links
 
-- [Register an application in Microsoft Entra ID](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app#register-an-application)
+* Microsoft: *Integrate web or native apps with Copilot Studio using the Microsoft 365 Agents SDK*. ([Microsoft Learn][2])
+* Microsoft: *Register an application in Microsoft Entra ID (App registrations)*. ([Microsoft Learn][8])
+* Microsoft Graph: *Permissions reference & overview (delegated vs app)*. ([Microsoft Learn][16])
+* Microsoft: *CopilotStudioAgent / Semantic Kernel integration notes*. ([Microsoft Learn][17])
+* npm / package notes: `@microsoft/agents-copilotstudio-client` (notes about `CopilotStudio.Copilots.Invoke`). ([npm][3])
+* Salesforce: *Create Named Credentials & External Credentials (how-to)*. ([Salesforce][18])
+* Salesforce: *Apex callouts with Named Credentials (developer guide)*. ([Salesforce Developers][6])
+* Salesforce: *Configure Auth Provider for Microsoft* (setup guidance). ([Salesforce][5])
+* Salesforce: *Remote Site Settings (add API endpoint)*. ([Salesforce][15])
 
-- [Microsoft Agents JavaScript SDK - copilotstudio-client](https://github.com/microsoft/Agents/tree/main/samples/nodejs/copilotstudio-client)
+---
 
-- [@microsoft/agents-copilotstudio-client package](https://learn.microsoft.com/en-us/javascript/api/@microsoft/agents-copilotstudio-client/?view=agents-sdk-js-latest)
 
-- [Microsoft Copilot Studio documentation](https://learn.microsoft.com/en-us/microsoft-copilot-studio/)
-
-- [Agentforce Developer Guide](https://developer.salesforce.com/docs/einstein/genai/guide/get-started-agents.html)
+[1]: https://learn.microsoft.com/en-us/entra/identity-platform/permissions-consent-overview?utm_source=chatgpt.com "Overview of permissions and consent in the ..."
+[2]: https://learn.microsoft.com/en-us/microsoft-copilot-studio/publication-integrate-web-or-native-app-m365-agents-sdk?utm_source=chatgpt.com "Integrate with web or native apps using Microsoft 365 ..."
+[3]: https://www.npmjs.com/package/%40microsoft/agents-copilotstudio-client?activeTab=readme&utm_source=chatgpt.com "microsoft/agents-copilotstudio-client"
+[4]: https://learn.microsoft.com/en-us/entra/fundamentals/how-to-create-delete-users?utm_source=chatgpt.com "How to create or delete users in Microsoft Entra ID"
+[5]: https://help.salesforce.com/s/articleView?id=ind.sf_contracts_configure_an_auth_provider_for_microsoft_app.htm&language=en_US&type=5&utm_source=chatgpt.com "Configure an Auth Provider for Microsoft App Manually"
+[6]: https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_callouts_named_credentials.htm?utm_source=chatgpt.com "Named Credentials as Callout Endpoints"
+[7]: https://www.salesforceben.com/how-to-set-up-persisting-oauth-tokens-in-salesforce/?utm_source=chatgpt.com "How to Set Up Persisting OAuth Tokens in Salesforce"
+[8]: https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app?utm_source=chatgpt.com "Register an application in Microsoft Entra ID"
+[9]: https://learn.microsoft.com/en-us/power-platform/admin/programmability-authentication-v2?utm_source=chatgpt.com "Authentication - Power Platform"
+[10]: https://learn.microsoft.com/en-us/entra/identity-platform/reply-url?utm_source=chatgpt.com "Redirect URI (reply URL) best practices and limitations"
+[11]: https://help.salesforce.com/s/articleView?id=xcloud.nc_create_edit_oath_ext_cred.htm&language=en_US&type=5&utm_source=chatgpt.com "Create or Edit an OAuth External Credential"
+[12]: https://help.salesforce.com/s/articleView?id=xcloud.named_credentials_about.htm&language=en_US&type=5&utm_source=chatgpt.com "Named Credentials"
+[13]: https://unofficialsf.com/understanding-named-credentials/?utm_source=chatgpt.com "Understanding Named Credentials"
+[14]: https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_classes_annotation_InvocableMethod.htm?utm_source=chatgpt.com "InvocableMethod Annotation | Apex Developer Guide"
+[15]: https://help.salesforce.com/s/articleView?id=ind.comms_t_add_api_endpoint_to_remote_site_settings_64690.htm&language=en_US&type=5&utm_source=chatgpt.com "Add API Endpoint to Remote Site Settings"
+[16]: https://learn.microsoft.com/en-us/graph/permissions-reference?utm_source=chatgpt.com "Microsoft Graph permissions reference"
+[17]: https://learn.microsoft.com/en-us/semantic-kernel/frameworks/agent/agent-types/copilot-studio-agent?utm_source=chatgpt.com "Exploring the Semantic Kernel Copilot Studio Agent"
+[18]: https://help.salesforce.com/s/articleView?id=xcloud.nc_named_creds_and_ext_creds.htm&language=en_US&type=5&utm_source=chatgpt.com "Create Named Credentials and External Credentials"
