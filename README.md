@@ -24,20 +24,27 @@ This project enables secure and role-based communication between Salesforce Agen
 
 ---
 
+Here’s a professionally rewritten version of your **Problem Statement and Solution** section, formatted in a GitHub documentation style:
+
+---
+
 ## Problem Statement and Solution
 
 ### Problem
 
-Salesforce agents need to interact with Microsoft Copilot Studio agents to retrieve knowledge from SharePoint and other Microsoft services. However, direct communication lacks secure authentication, role-based access, and a standardized invocation mechanism.
+Directly connecting **Salesforce Agentforce** to Microsoft services like **SharePoint** using native **Connectors (Beta)** can lead to unintended exposure of sensitive Microsoft data within the Salesforce environment. This approach lacks fine-grained control over data access and does not support robust role-based access control (RBAC).
 
 ### Solution
 
-This integration introduces:
+To address this, we implemented a secure **Agent-to-Agent communication** model between **Salesforce Agentforce** and **Microsoft Copilot Studio Agent**. Instead of accessing Microsoft data directly, Salesforce delegates the request to a Copilot Agent that has controlled access to Microsoft resources.
 
-- **Named Credentials** in Salesforce for secure token-based communication.
-- **Express.js middleware** to invoke Microsoft Copilot Studio Agent using Microsoft Agents SDK.
-- **Azure App Registration** for delegated permissions and token issuance.
-- **Role-based access control** via authenticated principals.
+Key components of the solution:
+
+- **Salesforce Named Credentials** are used to authenticate Microsoft users securely via OAuth 2.0, enabling **role-based access control**.
+- An **Express.js server** acts as a middleware, receiving authenticated requests from Salesforce and invoking the **Copilot Studio Agent** using the **Microsoft Agents SDK**.
+- The **access token** is automatically injected into the request header by Salesforce Named Credentials, ensuring secure and seamless communication.
+
+This architecture ensures that Microsoft data remains protected, access is governed by Azure roles, and the integration remains modular and scalable.
 
 ---
 
@@ -289,4 +296,5 @@ npm start
 
 
 ---
+
 
