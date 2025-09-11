@@ -1,5 +1,3 @@
-Here’s a professionally structured `README.md` file tailored for your GitHub repository hosting the Express.js server that facilitates secure Agent-to-Agent communication between Salesforce Agentforce and Microsoft Copilot Studio Agent.
-
 ---
 
 # Agentforce ↔️ Copilot Studio Integration
@@ -8,7 +6,7 @@ Here’s a professionally structured `README.md` file tailored for your GitHub r
 
 - [Overview](#overview)
 - [Problem Statement and Solution](#problem-statement-and-solution)
-- [Pros and Cons](#️pros-and-cons)
+- [Pros & Cons](#pros-and-cons)
 - [Setup Guide](#setup-guide)
   - 1. [Azure User Creation](#1-azure-user-creation)
   - 2. [Copilot Studio Agent Setup](#2-copilot-studio-agent-setup)
