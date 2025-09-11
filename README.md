@@ -118,7 +118,7 @@ Store the below details for further use:
 | **Parameter**     | **Description**                                                                                                                                       |
 |-------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Client ID      | The unique identifier (Application ID) assigned to your registered app in Azure Active Directory. Used by external services to identify the app.     |
-| Client Secret  | A confidential string generated during app registration. It acts like a password and is used to authenticate the app when requesting tokens. Create a new secret if not available/expired.        |
+| Client Secret  | A confidential string generated during app registration. It acts like a password and is used to authenticate the app when requesting tokens. `Create a new secret if not-available/expired`.        |
 | Tenant ID      | The unique identifier of your Azure Active Directory tenant. It defines the organizational boundary for identity and access management. |
 
 ---
@@ -287,9 +287,10 @@ npm start
 ```
 
 > 💡Ensure the server is publicly accessible and the URL is added in:
-> - Salesforce Remote Site Settings
+> - Salesforce → Remote Site Settings
 > - Azure App Registration → Redirect URI
 
 
 ---
+
 
