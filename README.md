@@ -1,5 +1,3 @@
----
-
 # Agentforce ↔️ Copilot Studio Integration
 
 ## 📑 Contents
@@ -291,3 +289,4 @@ npm start
 
 
 ---
+
