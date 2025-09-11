@@ -1,5 +1,7 @@
 # Agentforce ↔️ Copilot Studio Integration
 
+<p align='center'><img src="./static/diagram.png" width="50%"/></p>
+
 ## 📑 Contents
 
 - [Overview](#overview)
@@ -296,6 +298,7 @@ npm start
 
 
 ---
+
 
 
 
