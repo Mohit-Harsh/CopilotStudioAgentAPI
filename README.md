@@ -162,7 +162,7 @@ Create the following **Named Principals** and **Authenticate**.
 
 | Principal | Description |
 |----------|-------------|
-| `https://api.powerplatformapi.com/.default` | Access to Power Platform |
+| `https://api.powerplatform.com/.default` | Access to Power Platform |
 | `https://graph.microsoft.com/.default` | Access to Microsoft Graph |
 
 ---
@@ -296,6 +296,7 @@ npm start
 
 
 ---
+
 
 
 
