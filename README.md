@@ -1,33 +1,34 @@
+Here’s a professionally structured `README.md` file tailored for your GitHub repository hosting the Express.js server that facilitates secure Agent-to-Agent communication between Salesforce Agentforce and Microsoft Copilot Studio Agent.
+
 ---
 
 # Agentforce ↔️ Copilot Studio Integration
 
 ## 📑 Contents
 
-- Overview
-- Problem Statement & Solution
-- Pros & Cons
-- Step-by-Step Setup Guide
-  - 1. Azure User Creation
-  - 2. Copilot Studio Agent Setup
-  - 3. App Registration in Azure
-  - 4. Salesforce Auth Provider
-  - 5. External Credentials in Salesforce
-  - 6. Named Credentials in Salesforce
-  - 7. Apex Integration
-  - 8. Express.js Server Setup
-- Running the Express Server
-- Placeholders
+- [Overview](#overview)
+- [Problem Statement and Solution](#problem-statement-and-solution)
+- [Pros and Cons](#️pros-and-cons)
+- [Setup Guide](#setup-guide)
+  - 1. [Azure User Creation](#1-azure-user-creation)
+  - 2. [Copilot Studio Agent Setup](#2-copilot-studio-agent-setup)
+  - 3. [App Registration in Azure](#3-app-registration-in-azure)
+  - 4. [Salesforce Auth Provider](#4-salesforce-auth-provider)
+  - 5. [External Credentials in Salesforce](#5-external-credentials-in-salesforce)
+  - 6. [Named Credentials in Salesforce](#6-named-credentials-in-salesforce)
+  - 7. [Apex Integration](#7-apex-integration)
+  - 8. [Express.js Server Setup](#8-expressjs-server-setup)
+- [Running the Express Server](#️-express-server-setup)
 
 ---
 
-## 🧭 Overview
+## Overview
 
 This project enables secure and role-based communication between Salesforce Agentforce and Microsoft Copilot Studio Agent. It leverages Microsoft Agents SDK, Salesforce Named Credentials, and Azure App Registration to ensure seamless integration and access control to Microsoft resources like SharePoint.
 
 ---
 
-## ❓ Problem Statement & ✅ Solution
+## Problem Statement and Solution
 
 ### Problem
 
@@ -44,7 +45,7 @@ This integration introduces:
 
 ---
 
-## ⚖️ Pros & Cons
+## Pros and Cons
 
 | Pros | Cons |
 |------|------|
@@ -55,7 +56,7 @@ This integration introduces:
 
 ---
 
-## 🛠️ Step-by-Step Setup Guide
+## Setup Guide
 
 ### 1. Azure User Creation
 
@@ -118,7 +119,7 @@ Store the below details for further use:
 | **Parameter**     | **Description**                                                                                                                                       |
 |-------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Client ID      | The unique identifier (Application ID) assigned to your registered app in Azure Active Directory. Used by external services to identify the app.     |
-| Client Secret  | A confidential string generated during app registration. It acts like a password and is used to authenticate the app when requesting tokens. `Create a new secret if not-available/expired`.        |
+| Client Secret  | A confidential string generated during app registration. It acts like a password and is used to authenticate the app when requesting tokens. Create a new secret if not available/expired.        |
 | Tenant ID      | The unique identifier of your Azure Active Directory tenant. It defines the organizational boundary for identity and access management. |
 
 ---
@@ -250,7 +251,7 @@ This server uses Microsoft Agents SDK to invoke the Copilot Studio Agent.
 
 ---
 
-## ▶️ Running the Express Server
+## ▶️ Express Server Setup
 
 #### Clone Repository
 
@@ -287,10 +288,8 @@ npm start
 ```
 
 > 💡Ensure the server is publicly accessible and the URL is added in:
-> - Salesforce → Remote Site Settings
+> - Salesforce Remote Site Settings
 > - Azure App Registration → Redirect URI
 
 
 ---
-
-
