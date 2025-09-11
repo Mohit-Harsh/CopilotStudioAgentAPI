@@ -1,5 +1,3 @@
-Here’s a professionally structured `README.md` file tailored for your GitHub repository hosting the Express.js server that facilitates secure Agent-to-Agent communication between Salesforce Agentforce and Microsoft Copilot Studio Agent.
-
 ---
 
 # Agentforce ↔️ Copilot Studio Integration
@@ -294,3 +292,4 @@ npm start
 
 
 ---
+
