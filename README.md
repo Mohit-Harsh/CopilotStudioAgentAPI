@@ -158,7 +158,7 @@ Create an External Credential using the Auth Provider.
 | Authentication Flow Type     | **Browser Flow**   
 
 
-Create the following **Named Pricipals** and **Authenticate**.
+Create the following **Named Principals** and **Authenticate**.
 
 | Principal | Description |
 |----------|-------------|
@@ -296,5 +296,6 @@ npm start
 
 
 ---
+
 
 
