@@ -61,6 +61,20 @@ This architecture ensures that Microsoft data remains protected, access is gover
 
 ---
 
+## 🧩 Requirements
+
+Before proceeding with setup and deployment, ensure the following components and licenses are available and properly configured:
+
+| Category | Requirement | Description |
+|-----------|--------------|-------------|
+| 🧱 **Salesforce** | **Developer Edition Org** | Must have **Data Cloud** and **Agentforce** enabled for Copilot integration. |
+| ☁️ **Microsoft Azure** | **Active Subscription** | Required for **Copilot Studio Credits** or **Pay-as-you-go** billing model. |
+| 🤖 **Copilot Studio** | **Trial or User License** | Enables creation, configuration, and publishing of Copilot agents. |
+| 🧭 **Power Platform** | **Power Apps License** | Needed to publish and manage Copilot Studio agents through Power Platform APIs. |
+| 💼 **Microsoft 365** | **Business Basic or Standard** | Provides integration capabilities with **SharePoint** and **Microsoft Teams** for agent deployment. |
+
+---
+
 ## Setup Guide
 
 ### 1. Azure User Creation
@@ -298,6 +312,21 @@ npm start
 
 
 ---
+
+## 📚 References
+
+Below are key resources and SDK documentation links for implementing and managing your Copilot-Salesforce integration:
+
+| Reference | Description | Link |
+|------------|--------------|------|
+| **Microsoft Agents SDK** | Copilot Studio Client Node.js sample code for agent development. | [GitHub Repository](https://github.com/microsoft/Agents/tree/main/samples/nodejs/copilotstudio-client) |
+| **Microsoft App Registration** | Guide for registering applications and configuring API permissions/authentication in Entra ID. | [Microsoft Learn](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app) |
+| **Microsoft Power Platform API** | REST API documentation for publishing agents, managing billing, and assigning RBAC roles. | [Microsoft Learn](https://learn.microsoft.com/en-us/rest/api/power-platform) |
+| **Microsoft Copilot Studio** | Overview, setup, and administration guide for Copilot Studio. | [Microsoft Learn](https://learn.microsoft.com/en-us/microsoft-copilot-studio) |
+| **Salesforce Named Credentials** | Securely connect Salesforce to external services using Named Credentials. | [Salesforce Developer Guide](https://developer.salesforce.com/docs/platform/named-credentials/guide/get-started.html) |
+
+---
+
 
 
 
