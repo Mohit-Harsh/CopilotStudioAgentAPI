@@ -9,7 +9,12 @@ import pkg from '@microsoft/agents-copilotstudio-client/package.json' with { typ
 
 const createClient = async (access_token:string): Promise<CopilotStudioClient> => {
 
-  const settings = loadCopilotStudioConnectionSettingsFromEnv()
+  const settings = new ConnectionSettings();
+  settings.appClientId = process.env.CLIENT_ID!;
+  settings.agentIdentifier = process.env.AGENT_IDENTIFIER!;
+  settings.tenantId = process.env.TENANT_ID!;
+  settings.environmentId = process.env.ENVIRONMENT_ID!;
+
   //const token = await acquireToken(settings);
   const copilotClient = new CopilotStudioClient(settings,access_token);
   console.log(`Copilot Studio Client Version: ${pkg.version}, running with settings: ${JSON.stringify(settings, null, 2)}`)
