@@ -105,7 +105,7 @@ app.post("/invoke", async(req,res)=>{
 
 
 // Start the server
-const PORT = 3000;
-app.listen(PORT, () => {
+const PORT = Number(process.env.PORT);
+app.listen(PORT,"0.0.0.0", () => {
   console.log(`✅ Server is running at port ${PORT}`);
 });
