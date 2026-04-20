@@ -3,7 +3,7 @@ import express from "express";
 
 import * as msal from '@azure/msal-node'
 import { Activity, ActivityTypes, CardAction } from '@microsoft/agents-activity'
-import { ConnectionSettings, loadCopilotStudioConnectionSettingsFromEnv, CopilotStudioClient } from '@microsoft/agents-copilotstudio-client'
+import { ConnectionSettings, CopilotStudioClient } from '@microsoft/agents-copilotstudio-client'
 import pkg from '@microsoft/agents-copilotstudio-client/package.json' with { type: 'json' }
 
 
@@ -107,5 +107,5 @@ app.post("/invoke", async(req,res)=>{
 // Start the server
 const PORT = 3000;
 app.listen(PORT, () => {
-  console.log(`✅ Server running at http://localhost:${PORT}`);
+  console.log(`✅ Server running at port ${PORT}`);
 });
